@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Initial D: Mountain Drift</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap');
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+            font-family: 'Orbitron', sans-serif;
+            color: white;
+            user-select: none;
+        }
+
+        #gameCanvas {
+            display: block;
+        }
+
+        /* UI Overlay Layer */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        /* HUD Elements */
+        .hud-top {
+            padding: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .minimap-container {
+            width: 200px;
+            height: 200px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 2px solid #444;
+            border-radius: 50%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #minimap {
+            width: 100%;
+            height: 100%;
+        }
+
+        .hud-bottom {
+            padding: 20px;
+            display: flex;
+            align-items: flex-end;
+        }
+
+        .gauges {
+            position: relative;
+            width: 300px;
+            height: 150px;
+        }
+
+        /* Menus */
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0d0d0d 0%, #1a1a2e 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            pointer-events: auto;
+            transition: opacity 0.5s;
+        }
+
+        .hidden {
+            opacity: 0;
+            pointer-events: none;
+            display: none !important;
+        }
+
+        h1 {
+            font-size: 4rem;
+            text-transform: uppercase;
+            letter-spacing: 5px;
+            text-shadow: 0 0 10px #ff0055, 4px 4px 0px #000;
+            margin-bottom: 10px;
+            font-style: italic;
+        }
+
+        h2 {
+            color: #ddd;
+            margin-bottom: 30px;
+        }
+
+        /* Controls Legend Styling */
+        .controls-box {
+            margin-bottom: 30px;
+            padding: 20px 40px;
+            background: rgba(0, 0, 0, 0.6);
+            border: 1px solid #444;
+            border-left: 4px solid #ff0055;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            text-align: left;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .control-row {
+            display: flex;
+            justify-content: space-between;
+            min-width: 300px;
+            font-size: 1rem;
+            color: #ccc;
+            font-family: 'Orbitron', sans-serif;
+            letter-spacing: 1px;
+        }
+
+        .key {
+            color: #ff0055;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .selection-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            max-width: 800px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid #444;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: #ff0055;
+            transform: scale(1.02);
+        }
+
+        .card h3 {
+            margin: 0 0 10px 0;
+            color: #fff;
+        }
+
+        .stats {
+            font-size: 0.8rem;
+            color: #aaa;
+            text-align: left;
+        }
+
+        .stat-bar {
+            height: 4px;
+            background: #333;
+            margin-bottom: 5px;
+            position: relative;
+        }
+        
+        .stat-fill {
+            height: 100%;
+            background: #ff0055;
+        }
+
+        .btn {
+            margin-top: 20px;
+            padding: 15px 40px;
+            background: #ff0055;
+            color: white;
+            border: none;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.2rem;
+            cursor: pointer;
+            text-transform: uppercase;
+            transform: skew(-10deg);
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: skew(-10deg) scale(1.1);
+            background: #ff2277;
+        }
+
+        /* HUD Buttons */
+        .hud-btn {
+            background: rgba(255, 0, 85, 0.8);
+            border: 2px solid #fff;
+            color: white;
+            padding: 10px 20px;
+            font-family: 'Orbitron', sans-serif;
+            cursor: pointer;
+            text-transform: uppercase;
+            font-weight: bold;
+            pointer-events: auto;
+            transition: all 0.2s;
+            margin: 0 20px;
+            height: fit-content;
+        }
+        .hud-btn:hover {
+            background: #ff0055;
+            transform: scale(1.1);
+        }
+
+        .eurobeat-text {
+            position: absolute;
+            top: 15%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 5rem;
+            color: rgba(255, 255, 255, 0.1);
+            font-weight: bold;
+            pointer-events: none;
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- In-Game UI -->
+    <div id="ui-layer" class="hidden">
+        <div class="hud-top">
+            <div style="font-size: 1.5rem; text-shadow: 2px 2px 0 #000;">
+                POS: <span id="pos-display" style="color:#ff0055">1/2</span><br>
+                LAP: <span id="lap-display">1/3</span>
+            </div>
+            
+            <!-- Pause Button -->
+            <button class="hud-btn" onclick="Game.togglePause()">MENU (ESC)</button>
+
+            <div class="minimap-container">
+                <canvas id="minimap"></canvas>
+            </div>
+        </div>
+        <div class="hud-bottom">
+            <canvas id="gauges" width="300" height="150"></canvas>
+        </div>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="menu-pause" class="menu-screen hidden" style="background: rgba(0,0,0,0.85);">
+        <h2>PAUSED</h2>
+        <button class="btn" onclick="Game.togglePause()">RESUME</button>
+        <button class="btn" onclick="Game.restartRace()">RESTART</button>
+        <button class="btn" onclick="Game.quitToMenu()">MAIN MENU</button>
+    </div>
+
+    <!-- Main Menu -->
+    <div id="menu-start" class="menu-screen">
+        <div class="eurobeat-text">RUNNING IN THE 90s</div>
+        <h1>Mount Drift</h1>
+        <h2>Legend of the Pass</h2>
+        
+        <!-- Controls Legend -->
+        <div class="controls-box">
+            <div class="control-row"><span class="key">WASD / ARROWS</span> <span>DRIVE</span></div>
+            <div class="control-row"><span class="key">SPACEBAR</span> <span>DRIFT / BRAKE</span></div>
+            <div class="control-row"><span class="key">ESC</span> <span>PAUSE MENU</span></div>
+        </div>
+
+        <button class="btn" onclick="Game.goToCharacterSelect()">Start Game</button>
+    </div>
+
+    <!-- Character Select -->
+    <div id="menu-char" class="menu-screen hidden">
+        <h2>Select Machine</h2>
+        <div class="selection-grid" id="car-grid">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <!-- Track Select -->
+    <div id="menu-track" class="menu-screen hidden">
+        <h2>Select Course</h2>
+        <div class="selection-grid" id="track-grid">
+            <!-- Populated by JS -->
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div id="menu-result" class="menu-screen hidden">
+        <h1 id="result-title">VICTORY</h1>
+        <h2 id="result-time">Total Time: 00:00.00</h2>
+        <div style="display:flex; gap: 20px;">
+            <button class="btn" onclick="Game.restartRace()">Restart</button>
+            <button class="btn" onclick="Game.quitToMenu()">Main Menu</button>
+        </div>
+    </div>
+
+<script>
+/**
+ * INITIAL D: DRIFT STAGE
+ * A single-file racing game engine.
+ */
+
+// --- Assets & Data ---
+
+const CARS = [
+    {
+        id: 'ae86',
+        name: 'Trueno GT-Apex (AE86)',
+        driver: 'Takumi',
+        color: '#ffffff',
+        accent: '#000000', // Carbon hood/stripes
+        desc: 'The Ghost of Akina. Legendary drift machine.',
+        stats: { speed: 0.75, accel: 0.8, handling: 1.0 }, // High handling, drift king
+        width: 18, length: 38
+    },
+    {
+        id: 'fd3s',
+        name: 'RX-7 Type R (FD3S)',
+        driver: 'Keisuke',
+        color: '#ffcc00',
+        accent: '#222',
+        desc: 'Rotary Brothers (Younger). High power uphill specialist.',
+        stats: { speed: 0.95, accel: 0.9, handling: 0.8 },
+        width: 20, length: 40
+    },
+    {
+        id: 'fc3s',
+        name: 'RX-7 Savanna (FC3S)',
+        driver: 'Ryosuke',
+        color: '#f0f0f0',
+        accent: '#222',
+        desc: 'The White Comet. Perfectly balanced strategist.',
+        stats: { speed: 0.85, accel: 0.85, handling: 0.9 },
+        width: 19, length: 39
+    },
+    {
+        id: 'r32',
+        name: 'Skyline GT-R (R32)',
+        driver: 'Nakazato',
+        color: '#1a1a1a',
+        accent: '#aa0000',
+        desc: 'Night Kids Leader. 4WD Grip Monster.',
+        stats: { speed: 1.0, accel: 1.0, handling: 0.6 }, // Fast but heavy
+        width: 21, length: 42
+    }
+];
+
+// Procedural Track Generators (Concept: Array of points)
+const TRACKS = [
+    { name: 'Akina (Downhill)', difficulty: 'Hard', seed: 101, length: 300, complexity: 0.8 },
+    { name: 'Akagi (Red Suns)', difficulty: 'Medium', seed: 202, length: 250, complexity: 0.5 },
+    { name: 'Myogi (Night Kids)', difficulty: 'Easy', seed: 303, length: 200, complexity: 0.3 },
+    { name: 'Irohazaka (Jumps)', difficulty: 'Extreme', seed: 404, length: 350, complexity: 1.0 }
+];
+
+// --- Engine Classes ---
+
+class Input {
+    constructor() {
+        this.keys = {};
+        window.addEventListener('keydown', e => this.keys[e.key] = true);
+        window.addEventListener('keyup', e => this.keys[e.key] = false);
+    }
+    get up() { return this.keys['ArrowUp'] || this.keys['w']; }
+    get down() { return this.keys['ArrowDown'] || this.keys['s']; }
+    get left() { return this.keys['ArrowLeft'] || this.keys['a']; }
+    get right() { return this.keys['ArrowRight'] || this.keys['d']; }
+}
+
+class Car {
+    constructor(config, x, y, isPlayer = false) {
+        this.config = config;
+        this.x = x;
+        this.y = y;
+        this.angle = 0; // Facing angle
+        this.velocity = { x: 0, y: 0 };
+        this.driftAngle = 0; // Visual slide
+        this.isPlayer = isPlayer;
+        
+        // Refined Physics Constants
+        // accel: Power of the engine
+        this.acceleration = 0.35 + (config.stats.accel * 0.15); 
+        // turnSpeed: How fast the steering wheel turns
+        this.turnSpeed = 0.04 + (config.stats.handling * 0.015); 
+        
+        // Grip constants
+        this.gripStatic = 0.85; // Normal cornering grip (kills side slide fast)
+        this.gripDynamic = 0.97; // Drifting grip (allows slide to continue)
+        this.drag = 0.985; // Air resistance
+        
+        // State
+        this.gear = 1;
+        this.rpm = 0;
+        this.lap = 1;
+        this.checkpointIndex = 0;
+        this.finished = false;
+        this.finishTime = 0;
+    }
+
+    update(track, opponent) {
+        if (this.finished) {
+            this.velocity.x *= 0.9;
+            this.velocity.y *= 0.9;
+            this.x += this.velocity.x;
+            this.y += this.velocity.y;
+            return;
+        }
+
+        // 1. Input / AI Control
+        let throttle = 0;
+        let steering = 0;
+        let handbrake = false;
+
+        // Calculate speed for AI/Physics use
+        let speed = Math.sqrt(this.velocity.x**2 + this.velocity.y**2);
+
+        if (!this.isPlayer) {
+            // AI Logic - IMPROVED NAVIGATION
+            
+            // Dynamic Lookahead: Look further ahead as speed increases
+            // Base lookahead of 4 points, plus more for every 5 units of speed
+            let lookAhead = 4 + Math.floor(speed / 3); 
+            // Cap lookahead to prevent cutting across the map on huge loops
+            if (lookAhead > 15) lookAhead = 15;
+
+            let targetIndex = (this.checkpointIndex + lookAhead) % track.points.length;
+            let target = track.points[targetIndex];
+            
+            let dx = target.x - this.x;
+            let dy = target.y - this.y;
+            let targetAngle = Math.atan2(dy, dx);
+            
+            // Steer towards target
+            let diff = targetAngle - this.angle;
+            while (diff <= -Math.PI) diff += Math.PI*2;
+            while (diff > Math.PI) diff -= Math.PI*2;
+
+            if (diff > 0.05) steering = 1;
+            else if (diff < -0.05) steering = -1;
+            
+            // Intelligent Throttle Control
+            // FIX: If speed is low, always accelerate to prevent reversing at start or if stuck
+            if (speed < 5) {
+                throttle = 1.0;
+            } 
+            else {
+                // Cornering Logic
+                if (Math.abs(diff) > 0.8) {
+                    // Sharp turn: Hard brake
+                    throttle = -1; 
+                    handbrake = true; 
+                } else if (Math.abs(diff) > 0.4) {
+                    // Medium turn: Coast (0) instead of negative throttle to prevent reversing
+                    throttle = 0; 
+                } else if (Math.abs(diff) > 0.2) {
+                    // Gentle turn: Coast
+                    throttle = 0;
+                } else {
+                    // Straight: Full gas
+                    throttle = 1;
+                }
+
+                // Speed Governor for Safety
+                if (speed > 35 && Math.abs(diff) > 0.1) {
+                    throttle = 0;
+                }
+            }
+
+        } else {
+            // Player Logic
+            if (Game.input.up) throttle = 1;
+            if (Game.input.down) throttle = -1; // Brake/Reverse
+            if (Game.input.left) steering = -1;
+            if (Game.input.right) steering = 1;
+            if (Game.input.keys[' ']) handbrake = true;
+        }
+
+        // 2. Physics Update
+        // ... (Physics code same as before) ...
+        
+        // Apply Steering (Only if moving)
+        if (speed > 0.5) {
+            // Reverse steering if going backwards
+            let dir = 1;
+            // Determine if actually reversing (velocity opposing angle significantly)
+            // Dot product of velocity and heading
+            let dot = this.velocity.x * Math.cos(this.angle) + this.velocity.y * Math.sin(this.angle);
+            if (dot < -0.1) dir = -1; // We are reversing
+
+            // Turning gets harder at extremely high speeds (understeer)
+            let highSpeedDamp = Math.max(0.5, 1 - (speed / 100)); 
+            this.angle += steering * this.turnSpeed * dir * highSpeedDamp;
+        }
+
+        // Apply Acceleration Force in direction of Heading
+        if (throttle !== 0) {
+            this.velocity.x += Math.cos(this.angle) * this.acceleration * throttle;
+            this.velocity.y += Math.sin(this.angle) * this.acceleration * throttle;
+        }
+
+        // 3. Advanced Vehicle Dynamics (Vector Decomposition)
+        // Decompose velocity into Forward and Lateral (Side) components relative to car
+        let cos = Math.cos(this.angle);
+        let sin = Math.sin(this.angle);
+
+        // Dot Product for projection
+        let vForward = this.velocity.x * cos + this.velocity.y * sin;
+        let vLateral = this.velocity.x * -sin + this.velocity.y * cos;
+
+        // Apply Lateral Friction (Tires resisting side motion)
+        let currentGrip = this.gripStatic;
+        let driftThreshold = 3.0; // Speed at which tires break loose
+        
+        if (handbrake) {
+            driftThreshold = 0.0;
+            currentGrip = 0.98; 
+        } 
+        else if (Math.abs(vLateral) > driftThreshold) {
+            currentGrip = this.gripDynamic;
+            this.driftAngle = Math.atan2(this.velocity.y, this.velocity.x) - this.angle; 
+        } else {
+            this.driftAngle = 0;
+        }
+        
+        vLateral *= currentGrip;
+        vForward *= this.drag;
+        if (throttle === 0) vForward *= 0.99;
+
+        // Recompose velocity from updated components
+        this.velocity.x = vForward * cos - vLateral * sin;
+        this.velocity.y = vForward * sin + vLateral * cos;
+
+        // Update Position
+        this.x += this.velocity.x;
+        this.y += this.velocity.y;
+
+        // 4. Update Game State Data
+        this.currentSpeedDisplay = speed * 12; 
+        
+        // Auto Gearbox
+        this.rpm = (this.currentSpeedDisplay / (this.gear * 55)) * 7000; 
+        if (this.rpm > 7500 && this.gear < 5) {
+            this.gear++;
+            this.rpm -= 3000;
+        }
+        if (this.rpm < 3000 && this.gear > 1) {
+            this.gear--;
+            this.rpm += 2500;
+        }
+        if (this.rpm > 8000) this.rpm = 8000 + Math.random() * 200;
+
+        this.checkTrackLimits(track);
+        this.checkProgress(track);
+    }
+
+    handleInput() {}
+
+    // ... rest of AI and Helper methods ...
+    // Note: runAI logic is inside update now to share variables easily
+
+    checkTrackLimits(track) {
+        let p = track.points[this.checkpointIndex];
+        let dx = this.x - p.x;
+        let dy = this.y - p.y;
+        let dist = Math.sqrt(dx*dx + dy*dy);
+
+        if (dist > track.width / 2) {
+            this.velocity.x *= 0.9;
+            this.velocity.y *= 0.9;
+        }
+    }
+
+    checkProgress(track) {
+        let nextIdx = (this.checkpointIndex + 1) % track.points.length;
+        let nextP = track.points[nextIdx];
+        let dist = Math.hypot(this.x - nextP.x, this.y - nextP.y);
+        
+        if (dist < 100) {
+            this.checkpointIndex = nextIdx;
+            if (this.checkpointIndex === 0) {
+                this.lap++;
+                if (this.lap > Game.totalLaps) {
+                    this.finished = true;
+                    this.finishTime = Date.now();
+                    Game.checkFinish(this);
+                }
+            }
+        }
+    }
+
+    draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        // REVERTED ROTATION: Cars now face correct direction
+        ctx.rotate(this.angle);
+
+        // Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(-this.config.length/2 + 4, -this.config.width/2 + 4, this.config.length, this.config.width);
+
+        // Body
+        ctx.fillStyle = this.config.color;
+        ctx.fillRect(-this.config.length/2, -this.config.width/2, this.config.length, this.config.width);
+        
+        // Hood/Accent (Initial D style)
+        if (this.config.id === 'ae86') {
+            ctx.fillStyle = 'black'; // Carbon hood
+            ctx.fillRect(0, -this.config.width/2 + 1, this.config.length/2 - 1, this.config.width - 2);
+            ctx.fillStyle = 'white'; // Retain body
+            ctx.fillRect(5, -this.config.width/2 + 1, 5, this.config.width - 2); 
+            ctx.fillStyle = 'black'; // Side strip
+            ctx.fillRect(-this.config.length/2, 5, this.config.length, 2);
+        }
+
+        // Windshield
+        ctx.fillStyle = '#111';
+        ctx.fillRect(-2, -this.config.width/2 + 2, 8, this.config.width - 4);
+
+        // Popups (FD3S)
+        if (this.config.id === 'fd3s') {
+            ctx.fillStyle = '#333';
+            ctx.fillRect(10, -8, 5, 4);
+            ctx.fillRect(10, 4, 5, 4);
+        }
+
+        // ALWAYS DRAW HEADLIGHTS (To clarify orientation)
+        ctx.fillStyle = '#ffccaa'; // Warm light color
+        // Draw at the very front tip
+        ctx.fillRect(this.config.length/2 - 2, -this.config.width/2 + 2, 2, 4); // Front Right
+        ctx.fillRect(this.config.length/2 - 2, this.config.width/2 - 6, 2, 4); // Front Left
+
+        // Brake lights
+        let isBraking = Game.input.down || Game.input.keys[' '];
+        if (this.isPlayer) {
+             // Logic handled above
+        } else {
+             // Simple AI brake light logic
+             isBraking = Math.abs(this.velocity.x * Math.cos(this.angle) + this.velocity.y * Math.sin(this.angle)) < 0; 
+        }
+
+        if (isBraking) ctx.fillStyle = '#ff0000';
+        else ctx.fillStyle = '#550000';
+        
+        ctx.fillRect(-this.config.length/2, -6, 2, 4);
+        ctx.fillRect(-this.config.length/2, 2, 2, 4);
+
+        ctx.restore();
+    }
+}
+
+class Track {
+    constructor(config) {
+        this.config = config;
+        this.points = [];
+        this.trees = [];
+        this.width = 160;
+        this.generate();
+    }
+
+    generate() {
+        // Procedural generation based on sine waves
+        let cx = 0, cy = 0;
+        let angle = 0;
+        // Make a loop
+        for (let i = 0; i < this.config.length; i++) {
+            this.points.push({x: cx, y: cy});
+            // Curvature changes slowly
+            let curvature = Math.sin(i * this.config.complexity * 0.1) * 0.2;
+            // Add some noise based on seed
+            curvature += Math.cos(i * 0.05 + this.config.seed) * 0.1;
+            
+            // Force loop closure logic (simplified: just a long winding road for now, 
+            // making a perfect loop procedurally in 1 file is hard, so we assume point-to-point or a large circle base)
+            
+            // Let's do a large circle base + noise
+            let baseAngle = (i / this.config.length) * Math.PI * 2;
+            let radius = 1000 + Math.sin(i * 0.1 * this.config.complexity) * 300;
+            
+            this.points[i] = {
+                x: Math.cos(baseAngle) * radius,
+                y: Math.sin(baseAngle) * radius
+            };
+        }
+
+        // Generate Trees/Sakura
+        for (let i = 0; i < 400; i++) {
+            let angle = Math.random() * Math.PI * 2;
+            let dist = 900 + Math.random() * 600; // Around the track area
+            this.trees.push({
+                x: Math.cos(angle) * dist,
+                y: Math.sin(angle) * dist,
+                size: 20 + Math.random() * 30,
+                type: Math.random() > 0.3 ? 'sakura' : 'green'
+            });
+        }
+    }
+
+    drawGround(ctx, cam) {
+        // Draw track asphalt
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.lineWidth = this.width;
+        ctx.strokeStyle = '#222'; // Asphalt
+        
+        ctx.beginPath();
+        if (this.points.length > 0) ctx.moveTo(this.points[0].x, this.points[0].y);
+        for (let i = 1; i < this.points.length; i++) {
+            ctx.lineTo(this.points[i].x, this.points[i].y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+
+        // Center line
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#dca'; // Faded yellow/white
+        ctx.setLineDash([20, 20]);
+        ctx.beginPath();
+        if (this.points.length > 0) ctx.moveTo(this.points[0].x, this.points[0].y);
+        for (let i = 1; i < this.points.length; i++) {
+            ctx.lineTo(this.points[i].x, this.points[i].y);
+        }
+        ctx.closePath();
+        ctx.stroke();
+        ctx.setLineDash([]);
+        
+        // Curbs
+        ctx.lineWidth = this.width + 10;
+        ctx.strokeStyle = '#fff';
+        ctx.globalCompositeOperation = 'destination-over'; // Draw behind track
+        ctx.beginPath();
+        if (this.points.length > 0) ctx.moveTo(this.points[0].x, this.points[0].y);
+        for (let i = 1; i < this.points.length; i++) ctx.lineTo(this.points[i].x, this.points[i].y);
+        ctx.closePath();
+        ctx.stroke();
+        
+        ctx.lineWidth = this.width + 10;
+        ctx.strokeStyle = '#f00';
+        ctx.setLineDash([20, 20]);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.globalCompositeOperation = 'source-over';
+    }
+
+    drawDecor(ctx) {
+        // Draw trees
+        this.trees.forEach(t => {
+            // Simple culling
+            if (Math.abs(t.x - Game.camera.x) > Game.width/2 + 100) return;
+            if (Math.abs(t.y - Game.camera.y) > Game.height/2 + 100) return;
+
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, t.size, 0, Math.PI*2);
+            if (t.type === 'sakura') {
+                ctx.fillStyle = 'rgba(255, 183, 197, 0.8)'; // Pink
+            } else {
+                ctx.fillStyle = '#0f380f'; // Dark Green
+            }
+            ctx.fill();
+            // Trunk
+            ctx.fillStyle = '#1a0d00';
+            ctx.fillRect(t.x - 2, t.y, 4, 5);
+        });
+    }
+}
+
+// --- Main Game Object ---
+
+const Game = {
+    canvas: document.getElementById('gameCanvas'),
+    ctx: document.getElementById('gameCanvas').getContext('2d'),
+    width: window.innerWidth,
+    height: window.innerHeight,
+    
+    state: 'MENU',
+    input: new Input(),
+    
+    playerCar: null,
+    aiCar: null,
+    track: null,
+    totalLaps: 3,
+    raceEnded: false, // New flag
+    
+    camera: { x: 0, y: 0 },
+    
+    init() {
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        
+        // Key listener for ESC
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                if (this.state === 'RACE' || this.state === 'PAUSED') {
+                    this.togglePause();
+                }
+            }
+        });
+
+        this.populateMenus();
+        this.loop();
+    },
+    
+    resize() {
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        this.canvas.width = this.width;
+        this.canvas.height = this.height;
+    },
+    
+    populateMenus() {
+        // Cars
+        const carGrid = document.getElementById('car-grid');
+        CARS.forEach((car, index) => {
+            let el = document.createElement('div');
+            el.className = 'card';
+            el.innerHTML = `
+                <h3>${car.name}</h3>
+                <div class="stats">
+                    Driver: ${car.driver}<br>
+                    Speed: <div class="stat-bar"><div class="stat-fill" style="width:${car.stats.speed*100}%"></div></div>
+                    Accel: <div class="stat-bar"><div class="stat-fill" style="width:${car.stats.accel*100}%"></div></div>
+                    Drift: <div class="stat-bar"><div class="stat-fill" style="width:${car.stats.handling*100}%"></div></div>
+                </div>
+            `;
+            el.onclick = () => this.selectCar(index);
+            carGrid.appendChild(el);
+        });
+
+        // Tracks
+        const trackGrid = document.getElementById('track-grid');
+        TRACKS.forEach((track, index) => {
+            let el = document.createElement('div');
+            el.className = 'card';
+            el.innerHTML = `<h3>${track.name}</h3><p style="color:#aaa">${track.difficulty}</p>`;
+            el.onclick = () => this.selectTrack(index);
+            trackGrid.appendChild(el);
+        });
+    },
+
+    goToCharacterSelect() {
+        document.getElementById('menu-start').classList.add('hidden');
+        document.getElementById('menu-char').classList.remove('hidden');
+    },
+
+    selectCar(index) {
+        this.playerConfig = CARS[index];
+        // Pick random rival different from player
+        let rivalIdx = (index + 1) % CARS.length;
+        this.aiConfig = CARS[rivalIdx];
+        
+        document.getElementById('menu-char').classList.add('hidden');
+        document.getElementById('menu-track').classList.remove('hidden');
+    },
+
+    selectTrack(index) {
+        this.trackConfig = TRACKS[index];
+        document.getElementById('menu-track').classList.add('hidden');
+        this.startRace();
+    },
+
+    togglePause() {
+        if (this.state === 'RACE') {
+            this.state = 'PAUSED';
+            document.getElementById('menu-pause').classList.remove('hidden');
+        } else if (this.state === 'PAUSED') {
+            this.state = 'RACE';
+            document.getElementById('menu-pause').classList.add('hidden');
+        }
+    },
+
+    restartRace() {
+        document.getElementById('menu-pause').classList.add('hidden');
+        document.getElementById('menu-result').classList.add('hidden');
+        this.startRace();
+    },
+
+    quitToMenu() {
+        this.state = 'MENU';
+        document.getElementById('menu-pause').classList.add('hidden');
+        document.getElementById('ui-layer').classList.add('hidden');
+        document.getElementById('menu-result').classList.add('hidden');
+        document.getElementById('menu-start').classList.remove('hidden');
+    },
+
+    startRace() {
+        document.getElementById('ui-layer').classList.remove('hidden');
+        this.track = new Track(this.trackConfig);
+        this.raceEnded = false; // Reset flag
+        
+        // Spawn points
+        let startX = this.track.points[0].x;
+        let startY = this.track.points[0].y;
+        
+        // FIX: Align cars better with the track tangent (Math.PI/2) to prevent initial steering confusion
+        this.playerCar = new Car(this.playerConfig, startX, startY - 20, true);
+        this.playerCar.angle = Math.PI/2 + 0.1; 
+        
+        this.aiCar = new Car(this.aiConfig, startX + 40, startY + 20, false);
+        this.aiCar.angle = Math.PI/2 + 0.1;
+
+        this.state = 'RACE';
+    },
+
+    checkFinish(car) {
+        // If race is already decided, ignore subsequent finishers
+        if (this.raceEnded) return;
+        
+        this.raceEnded = true; // Lock the result
+
+        let isPlayerWin = (car === this.playerCar);
+
+        document.getElementById('result-title').innerText = isPlayerWin ? "WINNER" : "LOSE";
+        document.getElementById('result-title').style.color = isPlayerWin ? "#0f0" : "#f00";
+        
+        // Format time
+        // let time = Date.now() - this.startTime; 
+        
+        setTimeout(() => {
+            document.getElementById('ui-layer').classList.add('hidden');
+            document.getElementById('menu-result').classList.remove('hidden');
+            // We do NOT stop the loop, but raceEnded prevents result overwrites.
+            // You can optionally freeze cars here if you want:
+            // this.state = 'FINISHED'; 
+        }, 2000);
+    },
+
+    update() {
+        if (this.state !== 'RACE') return;
+
+        this.playerCar.update(this.track, this.aiCar);
+        this.aiCar.update(this.track, this.playerCar);
+
+        // Camera follow player
+        this.camera.x = this.playerCar.x - this.width / 2;
+        this.camera.y = this.playerCar.y - this.height / 2;
+
+        this.updateUI();
+    },
+
+    draw() {
+        // Draw during RACE or PAUSED (so background doesn't disappear on pause)
+        if (this.state !== 'RACE' && this.state !== 'PAUSED') return;
+
+        // Clear Background (Night Grass)
+        this.ctx.fillStyle = '#051105'; 
+        this.ctx.fillRect(0, 0, this.width, this.height);
+
+        this.ctx.save();
+        this.ctx.translate(-this.camera.x, -this.camera.y);
+
+        // 1. Draw Ground/Track
+        this.track.drawGround(this.ctx, this.camera);
+
+        // 2. Draw Cars
+        this.aiCar.draw(this.ctx);
+        this.playerCar.draw(this.ctx);
+
+        // 3. Draw Decor (Trees/Sakura)
+        this.track.drawDecor(this.ctx);
+
+        // 4. Night Mode & Lighting
+        this.drawLighting();
+
+        this.ctx.restore();
+    },
+
+    drawLighting() {
+        // Create a temporary canvas or just use globalComposite for performance?
+        // Let's draw a big black rectangle over everything, then cut out lights.
+        
+        // Save context state
+        this.ctx.save();
+        
+        // We need to work in screen coordinates for the overlay
+        this.ctx.setTransform(1, 0, 0, 1, 0, 0); 
+        
+        // The darkness - MADE LIGHTER (0.5 opacity instead of 0.85)
+        this.ctx.fillStyle = 'rgba(10, 20, 40, 0.5)'; // Lighter, blue-ish moonlight
+        this.ctx.globalCompositeOperation = 'source-over';
+        this.ctx.fillRect(0, 0, this.width, this.height);
+
+        // Cut out headlights using destination-out
+        this.ctx.globalCompositeOperation = 'destination-out';
+
+        [this.playerCar, this.aiCar].forEach(car => {
+            // Transform car pos to screen space
+            let screenX = car.x - this.camera.x;
+            let screenY = car.y - this.camera.y;
+            
+            // Headlights
+            this.ctx.save();
+            this.ctx.translate(screenX, screenY);
+            this.ctx.rotate(car.angle);
+            
+            // Left Light
+            this.drawLightCone(200, 10, -10);
+            // Right Light
+            this.drawLightCone(200, 10, 10);
+            
+            // Taillights (Red glow) - Use XOR or lighter composite usually, but here we just cut darkness less?
+            // Actually, we'll draw colored lights AFTER the darkness layer in normal mode.
+            
+            this.ctx.restore();
+        });
+
+        this.ctx.restore();
+
+        // 5. Additive Lights (Glows)
+        this.ctx.save();
+        this.ctx.translate(-this.camera.x, -this.camera.y);
+        this.ctx.globalCompositeOperation = 'lighter';
+        
+        [this.playerCar, this.aiCar].forEach(car => {
+             // Red Taillight Glow
+            let grad = this.ctx.createRadialGradient(car.x - Math.cos(car.angle)*20, car.y - Math.sin(car.angle)*20, 5, car.x, car.y, 60);
+            grad.addColorStop(0, 'rgba(255, 0, 0, 0.8)');
+            grad.addColorStop(1, 'rgba(0,0,0,0)');
+            this.ctx.fillStyle = grad;
+            this.ctx.beginPath();
+            this.ctx.arc(car.x, car.y, 60, 0, Math.PI*2);
+            this.ctx.fill();
+        });
+        this.ctx.restore();
+    },
+
+    drawLightCone(length, offsetX, offsetY) {
+        this.ctx.beginPath();
+        this.ctx.moveTo(offsetX, offsetY);
+        this.ctx.lineTo(length, -length*0.4 + offsetY); // Cone spread
+        this.ctx.lineTo(length, length*0.4 + offsetY);
+        this.ctx.closePath();
+        
+        // Gradient for soft falloff
+        let g = this.ctx.createLinearGradient(0, 0, length, 0);
+        g.addColorStop(0, 'rgba(255,255,255,1.0)');
+        g.addColorStop(1, 'rgba(255,255,255,0.0)');
+        this.ctx.fillStyle = g;
+        this.ctx.fill();
+    },
+
+    updateUI() {
+        // Lap
+        document.getElementById('lap-display').innerText = `${this.playerCar.lap}/${this.totalLaps}`;
+        
+        // Position logic (simple distance check to next checkpoint)
+        let pDist = (this.playerCar.lap * 10000) + this.playerCar.checkpointIndex;
+        let aiDist = (this.aiCar.lap * 10000) + this.aiCar.checkpointIndex;
+        document.getElementById('pos-display').innerText = pDist >= aiDist ? "1st" : "2nd";
+
+        // Minimap
+        const mmCanvas = document.getElementById('minimap');
+        const mmCtx = mmCanvas.getContext('2d');
+        mmCanvas.width = 200;
+        mmCanvas.height = 200;
+        
+        mmCtx.clearRect(0,0,200,200);
+        mmCtx.fillStyle = 'rgba(0,0,0,0.5)';
+        mmCtx.fillRect(0,0,200,200);
+        
+        // Scale tracks to fit
+        mmCtx.save();
+        mmCtx.translate(100, 100);
+        let scale = 0.15; // approximate
+        mmCtx.scale(scale, scale);
+        
+        // Draw Track Line
+        mmCtx.beginPath();
+        mmCtx.strokeStyle = '#555';
+        mmCtx.lineWidth = 40;
+        this.track.points.forEach((p, i) => {
+            if(i===0) mmCtx.moveTo(p.x, p.y);
+            else mmCtx.lineTo(p.x, p.y);
+        });
+        mmCtx.stroke();
+        
+        mmCtx.strokeStyle = '#fff';
+        mmCtx.lineWidth = 10;
+        mmCtx.stroke();
+        
+        // Draw Dots
+        mmCtx.fillStyle = '#00ff00';
+        mmCtx.beginPath();
+        mmCtx.arc(this.playerCar.x, this.playerCar.y, 40, 0, Math.PI*2);
+        mmCtx.fill();
+        
+        mmCtx.fillStyle = '#ff0000';
+        mmCtx.beginPath();
+        mmCtx.arc(this.aiCar.x, this.aiCar.y, 40, 0, Math.PI*2);
+        mmCtx.fill();
+        
+        mmCtx.restore();
+
+        // Gauges
+        const gCanvas = document.getElementById('gauges');
+        const gCtx = gCanvas.getContext('2d');
+        gCtx.clearRect(0,0,300,150);
+        
+        // Tachometer (RPM) - Big Circle
+        this.drawGauge(gCtx, 75, 75, 60, this.playerCar.rpm, 9000, 'RPM', true);
+        
+        // Speedometer - Smaller
+        this.drawGauge(gCtx, 200, 75, 50, this.playerCar.currentSpeedDisplay, 200, 'KM/H', false);
+        
+        // Gear
+        gCtx.font = "bold 40px Orbitron";
+        gCtx.fillStyle = "#fff";
+        gCtx.fillText(this.playerCar.gear, 135, 90);
+    },
+
+    drawGauge(ctx, x, y, r, val, max, label, isTach) {
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fill();
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = '#444';
+        ctx.stroke();
+        
+        // Ticks
+        let startAng = Math.PI * 0.75;
+        let endAng = Math.PI * 2.25;
+        let range = endAng - startAng;
+        
+        // Redline area for tach
+        if (isTach) {
+            ctx.beginPath();
+            ctx.arc(x, y, r-5, startAng + range*0.8, endAng);
+            ctx.lineWidth = 5;
+            ctx.strokeStyle = '#cc0000';
+            ctx.stroke();
+        }
+
+        // Needle
+        let pct = Math.min(val / max, 1.1); // can go slightly over
+        let angle = startAng + (pct * range);
+        
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x + Math.cos(angle)*(r-10), y + Math.sin(angle)*(r-10));
+        ctx.strokeStyle = '#ff0055';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        // Label
+        ctx.font = "10px Orbitron";
+        ctx.fillStyle = "#aaa";
+        ctx.fillText(label, x - 10, y + r + 15);
+    },
+
+    loop() {
+        this.update();
+        this.draw();
+        requestAnimationFrame(() => this.loop());
+    }
+};
+
+window.onload = () => Game.init();
+
+</script>
+</body>
+</html>

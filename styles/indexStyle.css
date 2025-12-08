@@ -1,0 +1,54 @@
+body {
+  background-color: black;
+  font-family:'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: blanchedalmond;
+      }
+h1 {
+  font-family: Papyrus, 'Comic Sans MS', cursive, serif;
+      }
+p {
+  padding: 5px;
+  border: 2px solid blueviolet;
+  margin: 10px;
+      }
+img {
+  border: 5px solid black;
+  padding: 2px;
+  margin: 20px;
+      }
+.marioImg {
+  border: 5px solid red;
+  padding: 2px;
+  margin: 20px;
+}
+.rizz { 
+  font-family: chiller;
+  color: yellow;
+  background-color: fuchsia;
+  font-weight: bolder;
+  font-size: larger;
+  text-decoration: overline;
+border: dashed 6px aquamarine; 
+}
+.rizz:hover {
+  color: lime;
+  background-color: purple;
+  font-size: x-large;
+  border: solid 6px aquamarine;
+}
+li:hover {
+  background-color: lightsalmon;
+}
+a {
+  color: aqua;
+  text-decoration: underline;
+}
+a:visited {
+  color: violet;
+}
+.background {
+  background-image: url('/Alask/OneDrive/BYU/Fall 2025/IS 201/Website/Images/carsBackground.jpg');
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
